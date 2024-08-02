@@ -3,15 +3,23 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "next lint"
+    "dev": "next dev ",
+    "build": "next build ",
+    "start": "next start ",
+    "lint": "next lint "
   },
   "dependencies": {
+    "@chakra-ui/react": "^2.8.2",
+    "@emotion/react": "^11.13.0",
+    "@emotion/styled": "^11.13.0",
+    "@tanstack/react-query": "^5.51.18",
+    "axios": "^1.7.3",
+    "formik": "^2.4.6",
+    "framer-motion": "^11.3.21",
+    "next": "14.2.5",
     "react": "^18",
     "react-dom": "^18",
-    "next": "14.2.5"
+    "yup": "^1.4.0"
   },
   "devDependencies": {
     "eslint": "^8",

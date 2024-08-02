@@ -1,95 +1,259 @@
-import Image from "next/image";
-import styles from "./page.module.css";
+"use client"; // Menandai ini sebagai Client Component
+import {
+  Spinner,
+  FormControl,
+  FormLabel,
+  FormErrorMessage,
+  FormHelperText,
+  Input,
+  VStack,
+  Container,
+  Button,
+  Text,
+  useToast,
+  Table,
+  Thead,
+  Tr,
+  Th,
+  Tbody,
+  Td,
+  AlertDialog,
+  AlertDialogOverlay,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogCloseButton,
+  AlertDialogBody,
+  AlertDialogFooter,
+} from "@chakra-ui/react";
+import LinksHome from "./links";
 
-export default function Home() {
+import { useFormik } from "formik";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { useProductsHome } from "./useProductsHome";
+import { axiosInstance } from "@/lib/axios";
+import { useCreateProduct } from "./useCreateProduct";
+import { useDeleteProduct } from "./useDeleteProduct";
+import { useUpdateProduct } from "./useUpdateProduct";
+
+export default function Page() {
+  const {
+    data,
+    isLoading: isLoadingProducts,
+    refetch: refetchProducts,
+  } = useProductsHome();
+  const toast = useToast();
+
+  // const { data, isLoading } = useQuery({
+  //   queryFn: async () => {
+  //     const response = await axiosInstance.get("/barang");
+  //     return response.data;
+  //   },
+  // });
+
+  const formik = useFormik({
+    initialValues: {
+      nama: "",
+      kode: "",
+      harga: "",
+    },
+    onSubmit: () => {
+      const { nama, kode, harga } = formik.values;
+      mutate({
+        nama,
+        kode,
+        harga,
+      });
+      // console.log(values);
+      console.log("onSubmit dari function formik");
+
+      formik.setFieldValue("nama", "");
+      formik.setFieldValue("kode", "");
+      formik.setFieldValue("harga", "");
+    },
+
+    validate: (values) => {
+      const errors = {};
+      if (!values.nama) {
+        errors.nama = "Required";
+      }
+      if (!values.kode) {
+        errors.kode = "Required";
+      }
+      if (!values.harga) {
+        errors.harga = "Required";
+      }
+      return errors;
+    },
+  });
+
+  const { mutate, isLoading: createProductIsLoading } = useCreateProduct({
+    onMutate: () => {
+      console.log("onMutate dari useMutation");
+    },
+    onSuccess: () => {
+      // console.log(data);
+      toast({
+        title: "Product added ",
+        status: "success",
+        duration: 7000,
+      });
+
+      refetchProducts();
+    },
+    // onError: (error) => {
+    //   console.log(error);
+    // },
+  });
+
+  const { mutate: deleteProduct } = useDeleteProduct({
+    onSuccess: () => {
+      toast({
+        title: "Produk Berhasil di Hapus ",
+        status: "info",
+        duration: 7000,
+      });
+      refetchProducts();
+    },
+  });
+
+  const confirmDeleteProduct = (prductId) => {
+    const shouldDelete = confirm("Are you sure?");
+    if (shouldDelete) {
+      deleteProduct(prductId);
+      toast({
+        title: "Product deleted",
+        status: "info",
+        duration: 7000,
+      });
+    }
+  };
+
+  const { mutate: updateProduct, isLoading: updateProductIsLoading } =
+    useUpdateProduct({
+      onSuccess: () => {
+        toast({
+          title: "Product di edit ",
+          status: "success",
+          duration: 7000,
+        });
+        refetchProducts();
+      },
+    });
+
+  const onEditClick = (productId) => {
+    const product = data?.data.find((product) => product.id === productId);
+    if (product) {
+      formik.setFieldValue("id", product.id);
+      formik.setFieldValue("kode", product.kode);
+      formik.setFieldValue("nama", product.nama);
+      formik.setFieldValue("harga", product.harga);
+    }
+  };
+
+  const handleFormInput = (event) => {
+    // const { name, value } = event.target;
+    formik.setFieldValue(event.target.name, event.target.value);
+  };
+
+  const renderProducts = () => {
+    return data?.data.map((product) => {
+      return (
+        <Tr key={product.id}>
+          <Td>{product.id}</Td>
+          <Td>{product.kode}</Td>
+          <Td>{product.nama}</Td>
+          <Td>{product.harga}</Td>
+          <Td>
+            <Button onClick={() => onEditClick(product.id)} colorScheme="blue">
+              Edit {product.id}
+            </Button>
+          </Td>
+          <Td>
+            <Button
+              onClick={() => confirmDeleteProduct(product.id)}
+              colorScheme="red"
+            >
+              Delete {product.id}
+            </Button>
+          </Td>
+        </Tr>
+      );
+    });
+  };
+
   return (
-    <main className={styles.main}>
-      <div className={styles.description}>
-        <p>
-          Get started by editing&nbsp;
-          <code className={styles.code}>src/app/page.js</code>
-        </p>
-        <div>
-          <a
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{" "}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className={styles.vercelLogo}
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
-        </div>
-      </div>
+    <div>
+      <main>
+        <Container>
+          <h1>Hello, Product Next.js!</h1>
+          <div>
+            <LinksHome />
+          </div>
+          <div>
+            <Table>
+              <Thead>
+                <Tr>
+                  <Th>ID</Th>
+                  <Th>Kode</Th>
+                  <Th>Nama</Th>
+                  <Th>Harga</Th>
+                  <Th colSpan={2}>Action</Th>
+                </Tr>
+              </Thead>
+              <Tbody>
+                {renderProducts()}
+                {isLoadingProducts ? <Spinner size="xl" /> : null}
+              </Tbody>
+            </Table>
+          </div>
+          {/* buat formnya */}
+          <Text> {formik.values.nama}</Text>
+          <form onSubmit={formik.handleSubmit}>
+            <VStack spacing={"4"}>
+              <FormControl>
+                <FormLabel htmlFor="nama">nama</FormLabel>
+                <Input
+                  onChange={formik.handleChange}
+                  id="nama"
+                  type="text"
+                  name="nama"
+                  value={formik.values.nama}
+                />
+              </FormControl>
+              <FormControl>
+                <FormLabel htmlFor="kode">Kode Barang</FormLabel>
+                <Input
+                  onChange={formik.handleChange}
+                  id="kode"
+                  type="text"
+                  name="kode"
+                  placeholder="KB-001"
+                  value={formik.values.kode}
+                />
+              </FormControl>
+              <FormControl>
+                <FormLabel htmlFor="harga">Harga</FormLabel>
+                <Input
+                  onChange={formik.handleChange}
+                  id="harga"
+                  type="text"
+                  name="harga"
+                  value={formik.values.harga}
+                />
+              </FormControl>
+              {createProductIsLoading ? (
+                <Spinner />
+              ) : (
+                <Button mt={"4"} type="submit">
+                  Submit
+                </Button>
+              )}
+            </VStack>
+          </form>
 
-      <div className={styles.center}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-      </div>
-
-      <div className={styles.grid}>
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Docs <span>-&gt;</span>
-          </h2>
-          <p>Find in-depth information about Next.js features and API.</p>
-        </a>
-
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Learn <span>-&gt;</span>
-          </h2>
-          <p>Learn about Next.js in an interactive course with&nbsp;quizzes!</p>
-        </a>
-
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Templates <span>-&gt;</span>
-          </h2>
-          <p>Explore starter templates for Next.js.</p>
-        </a>
-
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Deploy <span>-&gt;</span>
-          </h2>
-          <p>
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
-      </div>
-    </main>
+          {/* <Toast /> */}
+        </Container>
+      </main>
+    </div>
   );
 }
