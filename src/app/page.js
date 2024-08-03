@@ -3,13 +3,9 @@ import {
   Spinner,
   FormControl,
   FormLabel,
-  FormErrorMessage,
-  FormHelperText,
   Input,
   VStack,
-  Container,
   Button,
-  Text,
   useToast,
   Table,
   Thead,
@@ -17,60 +13,56 @@ import {
   Th,
   Tbody,
   Td,
-  AlertDialog,
-  AlertDialogOverlay,
-  AlertDialogContent,
-  AlertDialogHeader,
-  AlertDialogCloseButton,
-  AlertDialogBody,
-  AlertDialogFooter,
+  TableContainer,
+  Box,
 } from "@chakra-ui/react";
-import LinksHome from "./links";
-
 import { useFormik } from "formik";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { useProductsHome } from "./useProductsHome";
-import { axiosInstance } from "@/lib/axios";
 import { useCreateProduct } from "./useCreateProduct";
 import { useDeleteProduct } from "./useDeleteProduct";
 import { useUpdateProduct } from "./useUpdateProduct";
 
 export default function Page() {
+  const toast = useToast();
+
   const {
     data,
     isLoading: isLoadingProducts,
     refetch: refetchProducts,
   } = useProductsHome();
-  const toast = useToast();
-
-  // const { data, isLoading } = useQuery({
-  //   queryFn: async () => {
-  //     const response = await axiosInstance.get("/barang");
-  //     return response.data;
-  //   },
-  // });
 
   const formik = useFormik({
     initialValues: {
+      id: "",
       nama: "",
       kode: "",
       harga: "",
     },
     onSubmit: () => {
-      const { nama, kode, harga } = formik.values;
-      mutate({
-        nama,
-        kode,
-        harga,
-      });
-      // console.log(values);
+      const { nama, kode, harga, id } = formik.values;
+      if (id) {
+        updateProduct({
+          id,
+          nama,
+          kode,
+          harga: parseInt(harga),
+        });
+      } else {
+        createProduct({
+          nama,
+          kode,
+          harga: parseInt(harga),
+        });
+      }
+
       console.log("onSubmit dari function formik");
 
+      formik.setFieldValue("id", "");
       formik.setFieldValue("nama", "");
       formik.setFieldValue("kode", "");
       formik.setFieldValue("harga", "");
     },
-
     validate: (values) => {
       const errors = {};
       if (!values.nama) {
@@ -86,24 +78,20 @@ export default function Page() {
     },
   });
 
-  const { mutate, isLoading: createProductIsLoading } = useCreateProduct({
-    onMutate: () => {
-      console.log("onMutate dari useMutation");
-    },
-    onSuccess: () => {
-      // console.log(data);
-      toast({
-        title: "Product added ",
-        status: "success",
-        duration: 7000,
-      });
-
-      refetchProducts();
-    },
-    // onError: (error) => {
-    //   console.log(error);
-    // },
-  });
+  const { mutate: createProduct, isLoading: createProductIsLoading } =
+    useCreateProduct({
+      onMutate: () => {
+        console.log("onMutate dari useMutation");
+      },
+      onSuccess: () => {
+        toast({
+          title: "Product added ",
+          status: "success",
+          duration: 7000,
+        });
+        refetchProducts();
+      },
+    });
 
   const { mutate: deleteProduct } = useDeleteProduct({
     onSuccess: () => {
@@ -116,10 +104,10 @@ export default function Page() {
     },
   });
 
-  const confirmDeleteProduct = (prductId) => {
+  const confirmDeleteProduct = (productId) => {
     const shouldDelete = confirm("Are you sure?");
     if (shouldDelete) {
-      deleteProduct(prductId);
+      deleteProduct(productId);
       toast({
         title: "Product deleted",
         status: "info",
@@ -140,19 +128,11 @@ export default function Page() {
       },
     });
 
-  const onEditClick = (productId) => {
-    const product = data?.data.find((product) => product.id === productId);
-    if (product) {
-      formik.setFieldValue("id", product.id);
-      formik.setFieldValue("kode", product.kode);
-      formik.setFieldValue("nama", product.nama);
-      formik.setFieldValue("harga", product.harga);
-    }
-  };
-
-  const handleFormInput = (event) => {
-    // const { name, value } = event.target;
-    formik.setFieldValue(event.target.name, event.target.value);
+  const onEditClick = (product) => {
+    formik.setFieldValue("id", product.id);
+    formik.setFieldValue("kode", product.kode);
+    formik.setFieldValue("nama", product.nama);
+    formik.setFieldValue("harga", product.harga);
   };
 
   const renderProducts = () => {
@@ -164,7 +144,7 @@ export default function Page() {
           <Td>{product.nama}</Td>
           <Td>{product.harga}</Td>
           <Td>
-            <Button onClick={() => onEditClick(product.id)} colorScheme="blue">
+            <Button onClick={() => onEditClick(product)} colorScheme="blue">
               Edit {product.id}
             </Button>
           </Td>
@@ -182,78 +162,78 @@ export default function Page() {
   };
 
   return (
-    <div>
-      <main>
-        <Container>
-          <h1>Hello, Product Next.js!</h1>
-          <div>
-            <LinksHome />
-          </div>
-          <div>
-            <Table>
-              <Thead>
-                <Tr>
-                  <Th>ID</Th>
-                  <Th>Kode</Th>
-                  <Th>Nama</Th>
-                  <Th>Harga</Th>
-                  <Th colSpan={2}>Action</Th>
-                </Tr>
-              </Thead>
-              <Tbody>
-                {renderProducts()}
-                {isLoadingProducts ? <Spinner size="xl" /> : null}
-              </Tbody>
-            </Table>
-          </div>
-          {/* buat formnya */}
-          <Text> {formik.values.nama}</Text>
-          <form onSubmit={formik.handleSubmit}>
-            <VStack spacing={"4"}>
-              <FormControl>
-                <FormLabel htmlFor="nama">nama</FormLabel>
-                <Input
-                  onChange={formik.handleChange}
-                  id="nama"
-                  type="text"
-                  name="nama"
-                  value={formik.values.nama}
-                />
-              </FormControl>
-              <FormControl>
-                <FormLabel htmlFor="kode">Kode Barang</FormLabel>
-                <Input
-                  onChange={formik.handleChange}
-                  id="kode"
-                  type="text"
-                  name="kode"
-                  placeholder="KB-001"
-                  value={formik.values.kode}
-                />
-              </FormControl>
-              <FormControl>
-                <FormLabel htmlFor="harga">Harga</FormLabel>
-                <Input
-                  onChange={formik.handleChange}
-                  id="harga"
-                  type="text"
-                  name="harga"
-                  value={formik.values.harga}
-                />
-              </FormControl>
-              {createProductIsLoading ? (
-                <Spinner />
-              ) : (
-                <Button mt={"4"} type="submit">
-                  Submit
-                </Button>
-              )}
-            </VStack>
-          </form>
+    <>
+      <TableContainer>
+        <Table maxWidth={"100%"} variant={"simple"}>
+          <Thead>
+            <Tr>
+              <Th>ID</Th>
+              <Th>Kode</Th>
+              <Th>Nama</Th>
+              <Th>Harga</Th>
+              <Th colSpan={2}>Action</Th>
+            </Tr>
+          </Thead>
+          <Tbody>
+            {renderProducts()}
+            {isLoadingProducts ? <Spinner size="xl" /> : null}
+          </Tbody>
+        </Table>
+      </TableContainer>
 
-          {/* <Toast /> */}
-        </Container>
-      </main>
-    </div>
+      <form onSubmit={formik.handleSubmit}>
+        <VStack spacing={"4"}>
+          <FormControl>
+            <FormLabel htmlFor="id">ID</FormLabel>
+            <Input
+              isDisabled
+              onChange={formik.handleChange}
+              id="id"
+              type="number"
+              name="id"
+              value={formik.values.id}
+            />
+          </FormControl>
+          <FormControl>
+            <FormLabel htmlFor="nama">Nama</FormLabel>
+            <Input
+              onChange={formik.handleChange}
+              id="nama"
+              type="text"
+              name="nama"
+              value={formik.values.nama}
+            />
+          </FormControl>
+          <FormControl>
+            <FormLabel htmlFor="kode">Kode Barang</FormLabel>
+            <Input
+              onChange={formik.handleChange}
+              id="kode"
+              type="text"
+              name="kode"
+              placeholder="KB-001"
+              value={formik.values.kode}
+            />
+          </FormControl>
+          <FormControl>
+            <FormLabel htmlFor="harga">Harga</FormLabel>
+            <Input
+              onChange={formik.handleChange}
+              id="harga"
+              type="text"
+              name="harga"
+              value={formik.values.harga}
+            />
+          </FormControl>
+          {createProductIsLoading ? (
+            <Spinner />
+          ) : (
+            <Button mt={"4"} type="submit">
+              Submit
+            </Button>
+          )}
+        </VStack>
+      </form>
+    </>
   );
 }

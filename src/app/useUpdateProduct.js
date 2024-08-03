@@ -3,10 +3,10 @@ import { useMutation } from "@tanstack/react-query";
 
 export const useUpdateProduct = ({ onSuccess }) => {
   return useMutation({
-    mutationFn: async (product) => {
+    mutationFn: async (body) => {
       const responseProduct = await axiosInstance.patch(
-        `/barang/${product.id}`,
-        product
+        `/barang/${body.id}`,
+        body
       );
       return responseProduct;
     },
